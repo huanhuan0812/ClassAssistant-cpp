@@ -4,7 +4,10 @@
 #include <onnxruntime_cxx_api.h>
 #include <cpu_provider_factory.h>
 #include "fileInterface.h"
-#include "fileUnit/TextSegmenter.h"
+// #include "fileUnit/TextSegmenter.h"
+#include "fileUnit/TextProcessor/TextSegmenter.h"
+#include "fileUnit/TextProcessor/FilenameSegmenter.h"
+#include "fileUnit/TextProcessor/TextCleaner.h"
 #include "fileUnit/vocabulary_loader.h"
 
 struct ClassificationResult {
@@ -69,9 +72,10 @@ static ClassificationResult classify_file(
     std::vector<int32_t> filename_indices(MAX_FILENAME_WORDS, 0);
     std::filesystem::path p(filepath);
     std::string filename = p.stem().string();
+    filename = TextProcessor::cleanText(filename);
 
     // 将文件名分词结果转换为索引
-    TextProcessor::FilenameSegmenter filename_segmenter(&text_segmenter);
+    TextProcessor::FilenameSegmenter filename_segmenter;
     std::vector<std::string> filename_words = filename_segmenter.cutFilename(filename);
     for (size_t i = 0; i < filename_words.size() && i < MAX_FILENAME_WORDS; ++i) {
         int rank = filename_vocab.getRank(QString::fromStdString(filename_words[i].c_str())) >= 20000 ? 0 : filename_vocab.getRank(QString::fromStdString(filename_words[i].c_str()));

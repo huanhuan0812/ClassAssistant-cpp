@@ -10,6 +10,7 @@ void settings::load() {
     textVocabPath = qsettings.value("textVocabPath", "").toString();
     mixMapPath = qsettings.value("mixMapPath", "").toString();
     coursewareFolderPath = qsettings.value("coursewareFolderPath", "").toString();
+    jiebaIdleTimeoutSeconds = qsettings.value("jiebaIdleTimeoutSeconds", 300).toInt(); // 默认5分钟
 }
 
 void settings::save() {
@@ -21,4 +22,5 @@ void settings::save() {
     qsettings.setValue("textVocabPath", textVocabPath);
     qsettings.setValue("mixMapPath", mixMapPath);
     qsettings.setValue("coursewareFolderPath", coursewareFolderPath);
+    qsettings.setValue("jiebaIdleTimeoutSeconds", jiebaIdleTimeoutSeconds); // 保存Jieba闲置超时秒数
 }

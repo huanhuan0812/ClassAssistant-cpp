@@ -27,12 +27,20 @@ qt_add_executable(ClassAssistant
     fileInterface.h
     fileUnit/pptxunit.h
     fileUnit/pptxunit.cpp
-    fileUnit/TextSegmenter.h
-    fileUnit/TextSegmenter.cpp
     fileUnit/vocabulary_loader.h
     fileUnit/vocabulary_loader.cpp
     fileUnit/docxunit.h
     fileUnit/docxunit.cpp
+    fileUnit/TextProcessor/JiebaSingleton.h
+    fileUnit/TextProcessor/JiebaSingleton.cpp
+    fileUnit/TextProcessor/Utils.h
+    fileUnit/TextProcessor/Utils.cpp
+    fileUnit/TextProcessor/TextCleaner.h
+    fileUnit/TextProcessor/TextCleaner.cpp
+    fileUnit/TextProcessor/TextSegmenter.h
+    fileUnit/TextProcessor/TextSegmenter.cpp
+    fileUnit/TextProcessor/FilenameSegmenter.h
+    fileUnit/TextProcessor/FilenameSegmenter.cpp
 )
 
 add_subdirectory("fluntqt")
