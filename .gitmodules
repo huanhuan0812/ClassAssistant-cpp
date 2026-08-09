@@ -1,0 +1,12 @@
+[submodule "fluntqt"]
+	path = fluntqt
+	url = git@github.com:calvinhxx/Fluent-Qt.git
+[submodule "pptx-reader"]
+	path = pptx-reader
+	url = git@github.com:huanhuan0812/pptx-reader.git
+[submodule "cppjieba"]
+	path = cppjieba
+	url = git@github.com:yanyiwu/cppjieba.git
+[submodule "docx-reader"]
+	path = docx-reader
+	url = git@github.com:huanhuan0812/docx-reader.git
