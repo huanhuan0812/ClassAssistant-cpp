@@ -7,6 +7,3 @@
 [submodule "cppjieba"]
 	path = cppjieba
 	url = git@github.com:yanyiwu/cppjieba.git
-[submodule "docx-reader"]
-	path = docx-reader
-	url = git@github.com:huanhuan0812/docx-reader.git
