@@ -87,7 +87,8 @@ static ClassificationResult classify_file(
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
     session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
-            
+    
+    [[maybe_unused]] auto status =
     OrtSessionOptionsAppendExecutionProvider_CPU(session_options, 0);
             
     Ort::Session session(env, model_path.c_str(), session_options);
