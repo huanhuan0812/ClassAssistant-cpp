@@ -41,6 +41,8 @@ qt_add_executable(ClassAssistant
     fileUnit/TextProcessor/TextSegmenter.cpp
     fileUnit/TextProcessor/FilenameSegmenter.h
     fileUnit/TextProcessor/FilenameSegmenter.cpp
+    mainwindow.h
+    mainwindow.cpp
 )
 
 add_subdirectory("fluntqt")
