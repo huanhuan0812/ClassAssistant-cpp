@@ -11,6 +11,11 @@ void settings::load() {
     mixMapPath = qsettings.value("mixMapPath", "").toString();
     coursewareFolderPath = qsettings.value("coursewareFolderPath", "").toString();
     jiebaIdleTimeoutSeconds = qsettings.value("jiebaIdleTimeoutSeconds", 300).toInt(); // 默认5分钟
+    dictPath = qsettings.value("jieba.dict.utf8", "").toString().toStdString();
+    hmmPath = qsettings.value("hmm_model.utf8", "").toString().toStdString();
+    userDictPath = qsettings.value("user.dict.utf8", "").toString().toStdString();
+    idfPath = qsettings.value("idf.utf8", "").toString().toStdString();
+    stopWordsPath = qsettings.value("stop_words.utf8", "").toString().toStdString();
 }
 
 void settings::save() {
@@ -23,4 +28,9 @@ void settings::save() {
     qsettings.setValue("mixMapPath", mixMapPath);
     qsettings.setValue("coursewareFolderPath", coursewareFolderPath);
     qsettings.setValue("jiebaIdleTimeoutSeconds", jiebaIdleTimeoutSeconds); // 保存Jieba闲置超时秒数
+    qsettings.setValue("jieba.dict.utf8", QString::fromStdString(dictPath));
+    qsettings.setValue("hmm_model.utf8", QString::fromStdString(hmmPath));
+    qsettings.setValue("user.dict.utf8", QString::fromStdString(userDictPath));
+    qsettings.setValue("idf.utf8", QString::fromStdString(idfPath));
+    qsettings.setValue("stop_words.utf8", QString::fromStdString(stopWordsPath));
 }

@@ -9,6 +9,7 @@
 #include "SearchView.h"
 #include "FileView.h"
 #include "settings.h"
+#include "fileUnit/TextProcessor/JiebaSingleton.h"
 
 using namespace fluent;
 using namespace fluent::collections;
@@ -208,6 +209,17 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     fluent::initializeResources();
     settings::instance().load();
+
+    // 初始化 JiebaSingleton
+    auto& jieba = TextProcessor::JiebaSingleton::getInstance();
+    jieba.setDictPaths(
+        settings::instance().dictPath,
+        settings::instance().hmmPath,
+        settings::instance().userDictPath,
+        settings::instance().idfPath,
+        settings::instance().stopWordsPath
+    );
+
     app.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());
 
     fluent::windowing::Window window;

@@ -4,8 +4,11 @@
 #include <fstream>
 #include <iostream>
 #include <QCoreApplication>
+#include <QDebug>
 
 namespace TextProcessor {
+
+// ============ 构造函数和析构函数 ============
 
 JiebaSingleton::JiebaSingleton() : QObject(nullptr) {
     // 从settings读取超时配置
@@ -16,8 +19,9 @@ JiebaSingleton::JiebaSingleton() : QObject(nullptr) {
     idle_timer_->setSingleShot(true);  // 单次触发
     connect(idle_timer_, &QTimer::timeout, this, &JiebaSingleton::onIdleTimeout);
     
-    std::cout << "JiebaSingleton: 初始化完成，闲置超时 = " 
-              << idle_timeout_seconds_ << " 秒" << std::endl;
+    qDebug() << "JiebaSingleton: 初始化完成，闲置超时 = " 
+              << idle_timeout_seconds_ << " 秒";
+    qDebug() << "JiebaSingleton: 词典路径未设置，请使用 setDictPaths() 或 initialize() 设置";
 }
 
 JiebaSingleton::~JiebaSingleton() {
@@ -27,10 +31,14 @@ JiebaSingleton::~JiebaSingleton() {
     clearJieba();
 }
 
+// ============ 单例获取 ============
+
 JiebaSingleton& JiebaSingleton::getInstance() {
     static JiebaSingleton instance;
     return instance;
 }
+
+// ============ 配置读取 ============
 
 int JiebaSingleton::getTimeoutFromSettings() const {
     try {
@@ -56,6 +64,8 @@ void JiebaSingleton::reloadTimeoutConfig() {
         }
     }
 }
+
+// ============ 初始化和加载 ============
 
 bool JiebaSingleton::initialize(
     const std::string& dict_path,
@@ -157,14 +167,38 @@ bool JiebaSingleton::checkDictFiles() const {
     };
     
     for (const auto& [name, path] : files) {
-        std::ifstream file(path);
-        if (!file.is_open()) {
-            const_cast<JiebaSingleton*>(this)->init_error_ = 
-                "词典文件不存在: " + path + " (" + name + ")";
-            std::cerr << "JiebaSingleton 错误: " << init_error_ << std::endl;
+        if (!checkSingleFile(path, name)) {
+            const_cast<JiebaSingleton*>(this)->init_error_ = validation_error_;
             return false;
         }
     }
+    
+    validation_error_.clear();
+    return true;
+}
+
+bool JiebaSingleton::checkSingleFile(const std::string& path, const std::string& name) const {
+    if (path.empty()) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = 
+            name + " 路径为空";
+        return false;
+    }
+    
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = 
+            name + " 文件不存在或无法打开: " + path;
+        return false;
+    }
+    
+    file.seekg(0, std::ios::end);
+    if (file.tellg() == 0) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = 
+            name + " 文件为空: " + path;
+        return false;
+    }
+    file.seekg(0, std::ios::beg);
+    
     return true;
 }
 
@@ -174,6 +208,8 @@ void JiebaSingleton::clearJieba() {
     }
     initialized_ = false;
 }
+
+// ============ 卸载和重载 ============
 
 bool JiebaSingleton::unload() {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -222,6 +258,284 @@ bool JiebaSingleton::reload() {
     return result;
 }
 
+bool JiebaSingleton::reloadWithCurrentPaths() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    // 检查是否所有路径都已设置
+    if (!hasAllPaths()) {
+        init_error_ = "路径未完全设置，无法重新加载";
+        std::cerr << "JiebaSingleton 错误: " << init_error_ << std::endl;
+        return false;
+    }
+    
+    // 先验证所有路径
+    if (!validateAllPaths()) {
+        init_error_ = "路径验证失败: " + validation_error_;
+        std::cerr << "JiebaSingleton 错误: " << init_error_ << std::endl;
+        return false;
+    }
+    
+    // 如果已加载，先卸载
+    if (initialized_ && jieba_ != nullptr) {
+        clearJieba();
+    }
+    
+    // 使用当前路径重新加载
+    bool result = doInitialize(
+        dict_path_, hmm_path_, user_dict_path_, idf_path_, stop_word_path_
+    );
+    
+    if (result) {
+        updateAccessTime();
+        resetIdleTimer();
+        qDebug() << "JiebaSingleton: 使用当前路径重新加载成功";
+    } else {
+        qDebug() << "JiebaSingleton: 使用当前路径重新加载失败";
+    }
+    
+    return result;
+}
+
+// ============ 路径管理方法 ============
+
+void JiebaSingleton::setDictPath(const std::string& path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (dict_path_ != path) {
+        dict_path_ = path;
+        qDebug() << "JiebaSingleton: 更新dict_path为" << QString::fromStdString(path);
+    }
+}
+
+void JiebaSingleton::setHmmPath(const std::string& path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (hmm_path_ != path) {
+        hmm_path_ = path;
+        qDebug() << "JiebaSingleton: 更新hmm_path为" << QString::fromStdString(path);
+    }
+}
+
+void JiebaSingleton::setUserDictPath(const std::string& path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (user_dict_path_ != path) {
+        user_dict_path_ = path;
+        qDebug() << "JiebaSingleton: 更新user_dict_path为" << QString::fromStdString(path);
+    }
+}
+
+void JiebaSingleton::setIdfPath(const std::string& path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (idf_path_ != path) {
+        idf_path_ = path;
+        qDebug() << "JiebaSingleton: 更新idf_path为" << QString::fromStdString(path);
+    }
+}
+
+void JiebaSingleton::setStopWordPath(const std::string& path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (stop_word_path_ != path) {
+        stop_word_path_ = path;
+        qDebug() << "JiebaSingleton: 更新stop_word_path为" << QString::fromStdString(path);
+    }
+}
+
+void JiebaSingleton::setDictPaths(
+    const std::string& dict_path,
+    const std::string& hmm_path,
+    const std::string& user_dict_path,
+    const std::string& idf_path,
+    const std::string& stop_word_path
+) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    dict_path_ = dict_path;
+    hmm_path_ = hmm_path;
+    user_dict_path_ = user_dict_path;
+    idf_path_ = idf_path;
+    stop_word_path_ = stop_word_path;
+    qDebug() << "JiebaSingleton: 批量更新所有词典路径";
+}
+
+std::string JiebaSingleton::getDictPath() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return dict_path_;
+}
+
+std::string JiebaSingleton::getHmmPath() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return hmm_path_;
+}
+
+std::string JiebaSingleton::getUserDictPath() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return user_dict_path_;
+}
+
+std::string JiebaSingleton::getIdfPath() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return idf_path_;
+}
+
+std::string JiebaSingleton::getStopWordPath() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return stop_word_path_;
+}
+
+JiebaSingleton::DictPaths JiebaSingleton::getAllPaths() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return DictPaths{
+        dict_path_,
+        hmm_path_,
+        user_dict_path_,
+        idf_path_,
+        stop_word_path_
+    };
+}
+
+void JiebaSingleton::clearAllPaths() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    dict_path_.clear();
+    hmm_path_.clear();
+    user_dict_path_.clear();
+    idf_path_.clear();
+    stop_word_path_.clear();
+    qDebug() << "JiebaSingleton: 已清空所有路径";
+}
+
+bool JiebaSingleton::hasDictPath() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return !dict_path_.empty();
+}
+
+bool JiebaSingleton::hasAllPaths() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return !dict_path_.empty() && 
+           !hmm_path_.empty() && 
+           !user_dict_path_.empty() && 
+           !idf_path_.empty() && 
+           !stop_word_path_.empty();
+}
+
+bool JiebaSingleton::validateDictPath(const std::string& path) const {
+    if (path.empty()) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = "路径为空";
+        return false;
+    }
+    
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = 
+            "文件不存在或无法打开: " + path;
+        return false;
+    }
+    
+    // 检查文件是否为空
+    file.seekg(0, std::ios::end);
+    if (file.tellg() == 0) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = 
+            "文件为空: " + path;
+        return false;
+    }
+    file.seekg(0, std::ios::beg);
+    
+    const_cast<JiebaSingleton*>(this)->validation_error_.clear();
+    return true;
+}
+
+bool JiebaSingleton::validateAllPaths() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    // 首先检查所有路径是否都已设置
+    if (!hasAllPaths()) {
+        const_cast<JiebaSingleton*>(this)->validation_error_ = 
+            "存在未设置的路径";
+        return false;
+    }
+    
+    std::vector<std::pair<std::string, std::string>> files = {
+        {"主词典", dict_path_},
+        {"HMM模型", hmm_path_},
+        {"用户词典", user_dict_path_},
+        {"IDF文件", idf_path_},
+        {"停用词文件", stop_word_path_}
+    };
+    
+    for (const auto& [name, path] : files) {
+        if (!checkSingleFile(path, name)) {
+            return false;
+        }
+    }
+    
+    validation_error_.clear();
+    return true;
+}
+
+// ============ 访问控制 ============
+
+cppjieba::Jieba* JiebaSingleton::getJieba() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    // 如果未加载但配置已保存且启用了自动恢复
+    if ((!initialized_ || jieba_ == nullptr) && init_config_saved_ && auto_reload_) {
+        qDebug() << "JiebaSingleton: 自动恢复Jieba实例";
+        mutex_.unlock();
+        bool success = reload();
+        mutex_.lock();
+        if (success) {
+            updateAccessTime();
+            resetIdleTimer();
+            return jieba_.get();
+        }
+        return nullptr;
+    }
+    
+    if (initialized_ && jieba_ != nullptr) {
+        updateAccessTime();
+        resetIdleTimer();  // 每次访问重置定时器
+    }
+    
+    return jieba_.get();
+}
+
+void JiebaSingleton::touch() {
+    updateAccessTime();
+    resetIdleTimer();
+}
+
+// ============ 自动卸载管理 ============
+
+void JiebaSingleton::setAutoUnload(bool enable) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto_unload_ = enable;
+    if (enable) {
+        resetIdleTimer();
+    } else {
+        stopIdleTimer();
+    }
+    qDebug() << "JiebaSingleton: 自动卸载 " << (enable ? "启用" : "禁用");
+}
+
+void JiebaSingleton::setIdleTimeout(int seconds) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    idle_timeout_seconds_ = seconds;
+    
+    // 同时更新settings
+    try {
+        auto& settings = settings::instance();
+        settings.jiebaIdleTimeoutSeconds = seconds;
+        settings.save();  // 保存到配置文件
+    } catch (const std::exception& e) {
+        std::cerr << "JiebaSingleton: 保存settings失败: " << e.what() << std::endl;
+    }
+    
+    if (seconds > 0 && auto_unload_ && initialized_ && jieba_ != nullptr) {
+        // 重启定时器
+        stopIdleTimer();
+        startIdleTimer();
+    } else if (seconds <= 0) {
+        stopIdleTimer();
+    }
+    std::cout << "JiebaSingleton: 闲置超时设置为 " << seconds << " 秒" << std::endl;
+}
+
 void JiebaSingleton::updateAccessTime() {
     std::lock_guard<std::mutex> lock(time_mutex_);
     last_access_time_ = std::chrono::steady_clock::now();
@@ -237,8 +551,8 @@ void JiebaSingleton::startIdleTimer() {
     if (idle_timer_ && auto_unload_ && idle_timeout_seconds_ > 0 && 
         initialized_ && jieba_ != nullptr) {
         idle_timer_->start(idle_timeout_seconds_ * 1000);  // 转换为毫秒
-        std::cout << "JiebaSingleton: 启动闲置定时器，超时时间 " 
-                  << idle_timeout_seconds_ << " 秒" << std::endl;
+        qDebug() << "JiebaSingleton: 启动闲置定时器，超时时间 " 
+                  << idle_timeout_seconds_ << " 秒";
     }
 }
 
@@ -268,7 +582,7 @@ void JiebaSingleton::onIdleTimeout() {
     
     // 检查是否超时
     if (elapsed >= idle_timeout_seconds_) {
-        std::cout << "JiebaSingleton: 闲置超时 (" << elapsed << "秒)，自动卸载" << std::endl;
+        qDebug() << "JiebaSingleton: 闲置超时 (" << elapsed << "秒)，自动卸载";
         // 解锁后卸载（避免死锁）
         time_mutex_.unlock();
         unload();
@@ -282,69 +596,7 @@ void JiebaSingleton::onIdleTimeout() {
     }
 }
 
-cppjieba::Jieba* JiebaSingleton::getJieba() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    // 如果未加载但配置已保存且启用了自动恢复
-    if ((!initialized_ || jieba_ == nullptr) && init_config_saved_ && auto_reload_) {
-        std::cout << "JiebaSingleton: 自动恢复Jieba实例" << std::endl;
-        mutex_.unlock();
-        bool success = reload();
-        mutex_.lock();
-        if (success) {
-            updateAccessTime();
-            resetIdleTimer();
-            return jieba_.get();
-        }
-        return nullptr;
-    }
-    
-    if (initialized_ && jieba_ != nullptr) {
-        updateAccessTime();
-        resetIdleTimer();  // 每次访问重置定时器
-    }
-    
-    return jieba_.get();
-}
-
-void JiebaSingleton::touch() {
-    updateAccessTime();
-    resetIdleTimer();
-}
-
-void JiebaSingleton::setAutoUnload(bool enable) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto_unload_ = enable;
-    if (enable) {
-        resetIdleTimer();
-    } else {
-        stopIdleTimer();
-    }
-    std::cout << "JiebaSingleton: 自动卸载 " << (enable ? "启用" : "禁用") << std::endl;
-}
-
-void JiebaSingleton::setIdleTimeout(int seconds) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    idle_timeout_seconds_ = seconds;
-    
-    // 同时更新settings
-    try {
-        auto& settings = settings::instance();
-        settings.jiebaIdleTimeoutSeconds = seconds;
-        settings.save();  // 保存到配置文件
-    } catch (const std::exception& e) {
-        std::cerr << "JiebaSingleton: 保存settings失败: " << e.what() << std::endl;
-    }
-    
-    if (seconds > 0 && auto_unload_ && initialized_ && jieba_ != nullptr) {
-        // 重启定时器
-        stopIdleTimer();
-        startIdleTimer();
-    } else if (seconds <= 0) {
-        stopIdleTimer();
-    }
-    std::cout << "JiebaSingleton: 闲置超时设置为 " << seconds << " 秒" << std::endl;
-}
+// ============ 停用词和有意义单字初始化 ============
 
 void JiebaSingleton::initStopwords() {
     std::vector<std::string> stop_words = {

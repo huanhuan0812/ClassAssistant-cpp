@@ -56,6 +56,58 @@ public:
     // 获取初始化错误信息
     std::string getInitError() const { return init_error_; }
     
+    // ============ 路径管理方法 ============
+    
+    // 设置单个词典路径（不立即初始化）
+    void setDictPath(const std::string& path);
+    void setHmmPath(const std::string& path);
+    void setUserDictPath(const std::string& path);
+    void setIdfPath(const std::string& path);
+    void setStopWordPath(const std::string& path);
+    
+    // 批量设置所有路径
+    void setDictPaths(
+        const std::string& dict_path,
+        const std::string& hmm_path,
+        const std::string& user_dict_path,
+        const std::string& idf_path,
+        const std::string& stop_word_path
+    );
+    
+    // 获取单个词典路径
+    std::string getDictPath() const;
+    std::string getHmmPath() const;
+    std::string getUserDictPath() const;
+    std::string getIdfPath() const;
+    std::string getStopWordPath() const;
+    
+    // 获取所有路径
+    struct DictPaths {
+        std::string dict_path;
+        std::string hmm_path;
+        std::string user_dict_path;
+        std::string idf_path;
+        std::string stop_word_path;
+    };
+    DictPaths getAllPaths() const;
+    
+    // 验证路径是否有效（文件存在且可读）
+    bool validateDictPath(const std::string& path) const;
+    bool validateAllPaths() const;
+    std::string getValidationError() const { return validation_error_; }
+    
+    // 清空所有路径
+    void clearAllPaths();
+    
+    // 检查路径是否已设置
+    bool hasDictPath() const;
+    bool hasAllPaths() const;
+    
+    // 使用当前设置的路径重新加载
+    bool reloadWithCurrentPaths();
+    
+    // ============ 自动管理策略 ============
+    
     // 设置自动恢复策略
     void setAutoReload(bool enable) { auto_reload_ = enable; }
     bool isAutoReloadEnabled() const { return auto_reload_; }
@@ -118,6 +170,7 @@ private:
     
     // 错误信息
     std::string init_error_;
+    mutable std::string validation_error_;  // 路径验证错误信息
     
     // 线程安全
     mutable std::mutex mutex_;
@@ -135,6 +188,7 @@ private:
     void initStopwords();
     void initMeaningfulSingleChars();
     bool checkDictFiles() const;
+    bool checkSingleFile(const std::string& path, const std::string& name) const;
     void clearJieba();
     void updateAccessTime();
     void startIdleTimer();

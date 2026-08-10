@@ -19,6 +19,7 @@ public:
     QString modelPath,fileVocabPath,textVocabPath,mixMapPath;
     QString coursewareFolderPath;
     int maxRecentFilsCnt=50;
+    std::string dictPath,hmmPath,userDictPath,idfPath,stopWordsPath;
 
     int jiebaIdleTimeoutSeconds=300; // Jieba闲置超时秒数，默认5分钟
 private:

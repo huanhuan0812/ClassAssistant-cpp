@@ -37,7 +37,6 @@ static const std::string categories[] = {
 
 static ClassificationResult classify_file(
         const std::string& filepath,
-        TextProcessor::TextSegmenter& text_segmenter,
         QString filename_vocab_file_path ,
         QString text_vocab_file_path ,
         const std::string& model_path
@@ -48,6 +47,7 @@ static ClassificationResult classify_file(
     std::string text_content = processfile(filepath);
     text_content = TextProcessor::cleanText(text_content);
 
+    TextProcessor::TextSegmenter text_segmenter;
     std::vector<std::string> words = text_segmenter.cutWords(text_content);
     result.word_count = words.size();
 
