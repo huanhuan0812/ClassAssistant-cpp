@@ -4,10 +4,6 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QLabel>
-#include "SettingsView.h"
-#include "OrganizeView.h"
-#include "SearchView.h"
-#include "FileView.h"
 #include "settings.h"
 #include "fileUnit/TextProcessor/JiebaSingleton.h"
 #include "mainwindow.h"
