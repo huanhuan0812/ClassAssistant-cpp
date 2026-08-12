@@ -1,5 +1,28 @@
 #pragma once
+#include <QVector>
+#include <QString>
+#include <QDateTime>
 #include <QStringList>
+
+enum class FileType {
+    Unknown,
+    Text,
+    Image,
+    Video,
+    Audio,
+    Docx,
+    PPtx,
+    PDF,
+    Archive,
+    Executable
+};
+
+struct fileData {
+    QString filePath;
+    FileType fileType;
+    QDateTime lastModified;
+    QStringList tags; // 用于存储文件的标签
+};
 
 class tempdata
 {
@@ -11,7 +34,7 @@ public:
     tempdata(const tempdata&) = delete;
     tempdata& operator=(const tempdata&) = delete;
 
-    QStringList recentFiles; // 存储最近文件的路径
+    QVector<fileData> allFiles; // 存储所有文件的路径
 private:
     tempdata()=default;
     ~tempdata()=default;
