@@ -12,6 +12,8 @@ mainwindow::mainwindow(QWidget* parent)
     setWindowTitle(QStringLiteral("ClassAssistant"));
     setMinimumSize(800, 600);
 
+    floatingBall = new FloatingBall(this);
+
     titlebar = this->titleBar();
 
     titleLabel = new fluent::textfields::Label(QStringLiteral("ClassAssistant"), titlebar);
@@ -70,5 +72,34 @@ mainwindow::mainwindow(QWidget* parent)
 
     listView->setSelectedIndex(0);
 
+    // 设置系统托盘图标
+    trayIcon = new QSystemTrayIcon(this);
+    trayIcon->setIcon(QIcon(":/icon/app.png"));
+    trayIcon->show();
+
+    QMenu* trayMenu = new QMenu(this);
+    QAction* showAction = new QAction("Show", this);
+    connect(showAction, &QAction::triggered, this, [this]() {
+        this->show();
+        this->raise();
+        this->activateWindow();
+        floatingBall->hideWithAnimation();  // 隐藏悬浮球
+    });
+    QAction* exitAction = new QAction("Exit", this);
+    connect(exitAction, &QAction::triggered, this, [this]() {
+        qApp->quit();
+    });
+    trayMenu->addAction(showAction);
+    trayMenu->addAction(exitAction);
+    trayIcon->setContextMenu(trayMenu);
+
+
+
     this->setContentWidget(navView);
+}
+
+void mainwindow::closeEvent(QCloseEvent* event) {
+    hide();
+    //floatingBall->showWithAnimation();  // 显示悬浮球
+    event->ignore();
 }

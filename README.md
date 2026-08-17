@@ -15,4 +15,5 @@
 - [docxcpp](https://github.com/yunxingluoyun/docxcpp)
 - [pptx-reader](https://github.com/huanhuan0812/pptx-reader)
 - vosk api
+- tessract api
 - Qt

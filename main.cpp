@@ -36,6 +36,7 @@ int main(int argc, char* argv[]) {
     window.show();
     QObject::connect(&app, &QApplication::aboutToQuit, []() {
         settings::instance().save();
+        //qDebug() << "Application is about to quit. Settings saved.";
     });
     return app.exec();
 }

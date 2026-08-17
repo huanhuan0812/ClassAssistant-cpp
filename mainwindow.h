@@ -4,6 +4,8 @@
 #include "components/windowing/TitleBar.h"
 #include <FluentQt/FluentQt.h>
 #include <QStandardItemModel>
+#include <QSystemTrayIcon>
+#include "FloatingBall.h"
 
 using namespace fluent;
 
@@ -203,5 +205,11 @@ private:
     fluent::navigation::NavigationView* navView;
     fluent::collections::ListView* listView;
 
+    QSystemTrayIcon* trayIcon;
+
     QStandardItemModel* listModel;
+
+    FloatingBall* floatingBall;  // 悬浮球实例
+protected:
+    void closeEvent(QCloseEvent* event) override;
 };
